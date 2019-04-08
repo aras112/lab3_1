@@ -62,6 +62,18 @@ public class BookKeeperTest
         Assert.assertThat(invoiceLines.size(), is(1));
         }
 
+    @Test
+    public void simpleElementsInItemList()
+        {
+        addRequestItem(makeRequestItem());
+        addRequestItem(makeRequestItem());
+
+        bookKeeper = new BookKeeper(invoiceFactory);
+        bookKeeper.issuance(invoiceRequest, taxPolicy);
+
+        Assert.assertThat(invoiceLines.size(), is(2));
+        }
+
 
 
 
