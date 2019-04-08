@@ -74,6 +74,29 @@ public class BookKeeperTest
         Assert.assertThat(invoiceLines.size(), is(2));
         }
 
+    @Test
+    public void oneElementOneCalculateTax()
+        {
+        addRequestItem(makeRequestItem());
+
+        bookKeeper = new BookKeeper(invoiceFactory);
+        bookKeeper.issuance(invoiceRequest, taxPolicy);
+
+        verify(taxPolicy, times(1)).calculateTax(any(), any());
+        }
+
+    @Test
+    public void AFewElementsAFewCalculateTaxInvocation()
+        {
+        addRequestItem(makeRequestItem());
+        addRequestItem(makeRequestItem());
+
+        bookKeeper = new BookKeeper(invoiceFactory);
+        bookKeeper.issuance(invoiceRequest, taxPolicy);
+
+        verify(taxPolicy, times(2)).calculateTax(any(), any());
+        }
+
 
 
 

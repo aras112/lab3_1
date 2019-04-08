@@ -15,28 +15,38 @@
  */
 package pl.com.bottega.ecommerce.sales.domain.invoicing;
 
+import java.lang.reflect.Type;
+
+import pl.com.bottega.ecommerce.sales.domain.productscatalog.ProductType;
 import pl.com.bottega.ecommerce.sharedkernel.Money;
 
-public class BookKeeper {
 
-	private InvoiceFactory invoiceFactory;
-	public BookKeeper(InvoiceFactory invoiceFactory) {
-		this.invoiceFactory = invoiceFactory;
-	}
-	public Invoice issuance(InvoiceRequest invoiceRequest, TaxPolicy taxPolicy) {
-		Invoice invoice = invoiceFactory.create(invoiceRequest.getClientData());
+public class BookKeeper
+    {
 
-		for (RequestItem item : invoiceRequest.getItems()) {
-			Money net = item.getTotalCost();
-			Tax tax = taxPolicy.calculateTax(item.getProductData().getType(),
-					net);
+    private InvoiceFactory invoiceFactory;
 
-			InvoiceLine invoiceLine = new InvoiceLine(item.getProductData(),
-					item.getQuantity(), net, tax);
-			invoice.addItem(invoiceLine);
-		}
+    public BookKeeper(InvoiceFactory invoiceFactory)
+        {
+        this.invoiceFactory = invoiceFactory;
+        }
 
-		return invoice;
-	}
+    public Invoice issuance(InvoiceRequest invoiceRequest, TaxPolicy taxPolicy)
+        {
+        Invoice invoice = invoiceFactory.create(invoiceRequest.getClientData());
 
-}
+        for (RequestItem item : invoiceRequest.getItems())
+            {
+            Money net = item.getTotalCost();
+            Tax tax = taxPolicy.calculateTax(item.getProductData().getType(),
+                    net);
+
+            InvoiceLine invoiceLine = new InvoiceLine(item.getProductData(),
+                    item.getQuantity(), net, tax);
+            invoice.addItem(invoiceLine);
+            }
+
+        return invoice;
+        }
+
+    }
