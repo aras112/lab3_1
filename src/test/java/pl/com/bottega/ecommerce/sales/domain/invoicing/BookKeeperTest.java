@@ -97,7 +97,20 @@ public class BookKeeperTest
         verify(taxPolicy, times(2)).calculateTax(any(), any());
         }
 
+    @Test
+    public void xElementsXCalculateTax()
+        {
+        int thisIsTheX = 100;
+        for (int i = 0; i < thisIsTheX; i++)
+            {
+            addRequestItem(makeRequestItem());
+            }
 
+        bookKeeper = new BookKeeper(invoiceFactory);
+        bookKeeper.issuance(invoiceRequest, taxPolicy);
+
+        verify(taxPolicy, times(thisIsTheX)).calculateTax(any(), any());
+        }
 
 
     private void initMockitoSendRequestItemToInviteLine()
