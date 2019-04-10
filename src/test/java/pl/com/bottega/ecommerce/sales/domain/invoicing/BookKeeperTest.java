@@ -4,16 +4,14 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Matchers;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import pl.com.bottega.ecommerce.canonicalmodel.publishedlanguage.ClientData;
+import pl.com.bottega.ecommerce.canonicalmodel.publishedlanguage.Id;
 import pl.com.bottega.ecommerce.sales.domain.productscatalog.ProductData;
 import pl.com.bottega.ecommerce.sharedkernel.Money;
 
@@ -28,50 +26,48 @@ import static org.mockito.Mockito.when;
 public class BookKeeperTest
     {
     @Mock
-    InvoiceFactory invoiceFactory;
+    InvoiceFactory mockInvoiceFactory;
     @Mock
-    Invoice invoice;
+    TaxPolicy mockTaxPolicy;
     @Mock
+    Tax mockTax;
+
     InvoiceRequest invoiceRequest;
-    @Mock
-    TaxPolicy taxPolicy;
-
-    BookKeeper bookKeeper;
-
-    List<InvoiceLine> invoiceLines;
-    List<RequestItem> requestItems;
+    BookKeeper testedBookKeeper;
+    Invoice invoice;
 
     @Before
     public void setUp()
         {
-        invoiceLines = new ArrayList<>();
-        requestItems = new ArrayList<>();
-        when(taxPolicy.calculateTax(any(), any())).thenReturn(mock(Tax.class));
-        initMockitoSendRequestItemToInviteLine();
+        invoiceRequest =new InvoiceRequest(mock(ClientData.class));
+        invoice = new Invoice(Id.generate(), mock(ClientData.class));
+        when(mockInvoiceFactory.create(any(ClientData.class))).thenReturn(invoice);
+
+        setTaxAmountForAllInvoiceLine(10);
         }
 
     @Test
     public void simpleOneElementInItemList()
         {
-        RequestItem item = makeRequestItem();
+        RequestItem item = makeRequestItem(1, 2);
         addRequestItem(item);
 
-        bookKeeper = new BookKeeper(invoiceFactory);
-        bookKeeper.issuance(invoiceRequest, taxPolicy);
+        testedBookKeeper = new BookKeeper(mockInvoiceFactory);
+        testedBookKeeper.issuance(invoiceRequest, mockTaxPolicy);
 
-        Assert.assertThat(invoiceLines.size(), is(1));
+        Assert.assertThat(invoice.getItems().size(), is(1));
         }
 
     @Test
     public void simpleElementsInItemList()
         {
         addRequestItem(makeRequestItem());
-        addRequestItem(makeRequestItem());
+        addRequestItem(makeRequestItem(2,2));
 
-        bookKeeper = new BookKeeper(invoiceFactory);
-        bookKeeper.issuance(invoiceRequest, taxPolicy);
+        testedBookKeeper = new BookKeeper(mockInvoiceFactory);
+        testedBookKeeper.issuance(invoiceRequest, mockTaxPolicy);
 
-        Assert.assertThat(invoiceLines.size(), is(2));
+        Assert.assertThat(invoice.getItems().size(), is(2));
         }
 
     @Test
@@ -79,10 +75,10 @@ public class BookKeeperTest
         {
         addRequestItem(makeRequestItem());
 
-        bookKeeper = new BookKeeper(invoiceFactory);
-        bookKeeper.issuance(invoiceRequest, taxPolicy);
+        testedBookKeeper = new BookKeeper(mockInvoiceFactory);
+        testedBookKeeper.issuance(invoiceRequest, mockTaxPolicy);
 
-        verify(taxPolicy, times(1)).calculateTax(any(), any());
+        verify(mockTaxPolicy, times(1)).calculateTax(any(), any());
         }
 
     @Test
@@ -91,10 +87,10 @@ public class BookKeeperTest
         addRequestItem(makeRequestItem());
         addRequestItem(makeRequestItem());
 
-        bookKeeper = new BookKeeper(invoiceFactory);
-        bookKeeper.issuance(invoiceRequest, taxPolicy);
+        testedBookKeeper = new BookKeeper(mockInvoiceFactory);
+        testedBookKeeper.issuance(invoiceRequest, mockTaxPolicy);
 
-        verify(taxPolicy, times(2)).calculateTax(any(), any());
+        verify(mockTaxPolicy, times(2)).calculateTax(any(), any());
         }
 
     @Test
@@ -106,35 +102,30 @@ public class BookKeeperTest
             addRequestItem(makeRequestItem());
             }
 
-        bookKeeper = new BookKeeper(invoiceFactory);
-        bookKeeper.issuance(invoiceRequest, taxPolicy);
+        testedBookKeeper = new BookKeeper(mockInvoiceFactory);
+        testedBookKeeper.issuance(invoiceRequest, mockTaxPolicy);
 
-        verify(taxPolicy, times(thisIsTheX)).calculateTax(any(), any());
-        }
-
-
-    private void initMockitoSendRequestItemToInviteLine()
-        {
-        when(invoiceRequest.getItems()).thenReturn(requestItems);
-        when(invoiceFactory.create(any(ClientData.class))).thenReturn(invoice);
-        Mockito.doAnswer((Answer) invocation ->
-                {
-                invoiceLines.add((InvoiceLine) invocation.getArguments()[0]);
-                return null;
-                }
-        ).when(invoice).addItem(Matchers.any(InvoiceLine.class));
+        verify(mockTaxPolicy, times(thisIsTheX)).calculateTax(any(), any());
         }
 
     private void addRequestItem(RequestItem item)
         {
-        requestItems.add(item);
+        invoiceRequest.add(item);
+        }
+
+    private RequestItem makeRequestItem(Integer quantity, Integer money)
+        {
+        return new RequestItem(mock(ProductData.class), quantity, new Money(money));
         }
 
     private RequestItem makeRequestItem()
         {
-        RequestItem item = mock(RequestItem.class);
-        when(item.getProductData()).thenReturn(mock(ProductData.class));
-        when(item.getTotalCost()).thenReturn(mock(Money.class));
-        return item;
+        return new RequestItem(mock(ProductData.class), 1, new Money(1));
+        }
+
+    private void setTaxAmountForAllInvoiceLine(Integer money)
+        {
+        when(mockTaxPolicy.calculateTax(any(), any())).thenReturn(mockTax);
+        when(mockTax.getAmount()).thenReturn(new Money(money));
         }
     }
