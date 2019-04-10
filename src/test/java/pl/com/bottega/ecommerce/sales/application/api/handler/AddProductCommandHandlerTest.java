@@ -6,9 +6,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import java.time.Instant;
+import java.util.Date;
+
+import pl.com.bottega.ecommerce.canonicalmodel.publishedlanguage.ClientData;
 import pl.com.bottega.ecommerce.canonicalmodel.publishedlanguage.Id;
 import pl.com.bottega.ecommerce.sales.application.api.command.AddProductCommand;
 import pl.com.bottega.ecommerce.sales.domain.client.Client;
@@ -16,14 +19,17 @@ import pl.com.bottega.ecommerce.sales.domain.client.ClientRepository;
 import pl.com.bottega.ecommerce.sales.domain.equivalent.SuggestionService;
 import pl.com.bottega.ecommerce.sales.domain.productscatalog.Product;
 import pl.com.bottega.ecommerce.sales.domain.productscatalog.ProductRepository;
+import pl.com.bottega.ecommerce.sales.domain.productscatalog.ProductType;
 import pl.com.bottega.ecommerce.sales.domain.reservation.Reservation;
 import pl.com.bottega.ecommerce.sales.domain.reservation.ReservationRepository;
+import pl.com.bottega.ecommerce.sharedkernel.Money;
 import pl.com.bottega.ecommerce.system.application.SystemContext;
 import pl.com.bottega.ecommerce.system.application.SystemUser;
 
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -42,31 +48,30 @@ public class AddProductCommandHandlerTest
     @Mock
     private SystemContext systemContext;
     @Mock
-    private Reservation reservation;
-    @Mock
     private Product product;
     @Mock
     private AddProductCommand command;
 
     public AddProductCommandHandler testedHandler;
-    private ArgumentCaptor<Product> savedProduct;
+    private Reservation reservation;
 
     @Before
     public void setUp()
         {
-        //setReturningProductForProductRepo(product);
+        makeDefaultReservation();
         initAllStuff();
         }
 
     @Test
-    public void simpleTestOneProductOneIsAvailableInvocation()
-        {
-        testedHandler = new AddProductCommandHandler();
-        Product product = makeMockProductAndSetProductAvailable(true);
-        setReturningProductForProductRepo(product);
-        whenForTest();
-        verify(product, times(1)).isAvailable();
-        }
+    public void simpleTestOneProductTwoIsAvailableInvocation()
+        //Reservation class inv. isAvailable()  too!!!
+    {
+    testedHandler = new AddProductCommandHandler();
+    Product product = makeMockProductAndSetProductAvailable(true);
+    setReturningProductForProductRepo(product);
+    whenForTestedHandler();
+    verify(product, times(2)).isAvailable();
+    }
 
     @Test
     public void productIsAvailableAndIsAddedToReservation()
@@ -74,8 +79,8 @@ public class AddProductCommandHandlerTest
         testedHandler = new AddProductCommandHandler();
         Product product = makeMockProductAndSetProductAvailable(true);
         setReturningProductForProductRepo(product);
-        whenForTest();
-        Assert.assertThat(product, is(getFinallySavedProduct().getValue()));
+        whenForTestedHandler();
+        Assert.assertThat(product, is(getProductFromReservation(getFinallySavedReservations())));
         }
 
     @Test
@@ -85,12 +90,12 @@ public class AddProductCommandHandlerTest
         Product newNotAvailableProduct = makeMockProductAndSetProductAvailable(false);
         setReturningProductForProductRepo(newNotAvailableProduct);
         setReturningProductForSuggestion(makeMockProductAndSetProductAvailable(true));
-        whenForTest();
-        Assert.assertNotEquals(newNotAvailableProduct,getFinallySavedProduct().getValue());
+        whenForTestedHandler();
+        Assert.assertNotEquals(newNotAvailableProduct, getProductFromReservation(getFinallySavedReservations()));
         }
 
 
-    private void whenForTest()
+    private void whenForTestedHandler()
         {
         setAllClassesForTestedHandler();
         testedHandler.handle(command);
@@ -99,6 +104,15 @@ public class AddProductCommandHandlerTest
     private Product makeMockProductAndSetProductAvailable(Boolean isAvailable)
         {
         Product product = mock(Product.class);
+        when(product.isAvailable()).thenReturn(isAvailable);
+        return product;
+        }
+
+    private Product makeRealProductAndSetProductAvailable(Boolean isAvailable, Integer money,
+                                                          String name)
+        {
+        Product product = new Product(Id.generate(), new Money(money), name, ProductType.DRUG);
+        product = spy(product);// useful spy
         when(product.isAvailable()).thenReturn(isAvailable);
         return product;
         }
@@ -120,7 +134,7 @@ public class AddProductCommandHandlerTest
 
     private void setReturningProductForSuggestion(Product product)
         {
-        when(suggestionService.suggestEquivalent(any(),any())).thenReturn(product);
+        when(suggestionService.suggestEquivalent(any(), any())).thenReturn(product);
         }
 
     private void initAllStuff()
@@ -131,10 +145,21 @@ public class AddProductCommandHandlerTest
         when(systemContext.getSystemUser()).thenReturn(mock(SystemUser.class));
         }
 
-    private ArgumentCaptor<Product> getFinallySavedProduct()
+    private Reservation getFinallySavedReservations()
         {
-        savedProduct = ArgumentCaptor.forClass(Product.class);
-        verify(reservation).add(savedProduct.capture(), Mockito.anyInt());
-        return savedProduct;
+        ArgumentCaptor<Reservation> reservationArgumentCaptor = ArgumentCaptor.forClass(Reservation.class);
+        verify(reservationRepository).save(reservationArgumentCaptor.capture());
+        return reservationArgumentCaptor.getValue();
+        }
+
+    private void makeDefaultReservation()
+        {
+        reservation = new Reservation(Id.generate(), Reservation.ReservationStatus.OPENED,
+                mock(ClientData.class), Date.from(Instant.now()));
+        }
+
+    private Product getProductFromReservation(Reservation reservation)
+        {
+        return reservation.getItems().get(0).getProduct();
         }
     }

@@ -37,7 +37,7 @@ public class BookKeeperTest
     @Before
     public void setUp()
         {
-        invoiceRequest =new InvoiceRequest(mock(ClientData.class));
+        invoiceRequest = new InvoiceRequest(mock(ClientData.class));
         invoice = new Invoice(Id.generate(), mock(ClientData.class));
 
         when(mockedInvoiceFactory.create(any(ClientData.class))).thenReturn(invoice);
