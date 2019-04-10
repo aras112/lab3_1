@@ -98,7 +98,7 @@ public class BookKeeperTest
         }
 
     @Test
-    public void xElementsXCalculateTax()
+    public void xElementsXCalculateTaxInvocation()
         {
         int thisIsTheX = 100;
         for (int i = 0; i < thisIsTheX; i++)
