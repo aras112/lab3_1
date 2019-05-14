@@ -112,8 +112,11 @@ public class AddProductCommandHandlerTest
                                                           String name)
         {
         Product product = new Product(Id.generate(), new Money(money), name, ProductType.DRUG);
-        product = spy(product);// useful spy
-        when(product.isAvailable()).thenReturn(isAvailable);
+
+        if(!isAvailable) {
+        product.markAsRemoved();
+        }
+
         return product;
         }
 
